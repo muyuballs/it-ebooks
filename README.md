@@ -9,3 +9,6 @@ it-ebooks 是一个根据it－ebooks官方提供的api开发的 android client
 
 数据库 [ORM](https://github.com/jianxingqiao/Orm)
 
+## LICENSE ##
+
+[Apache License Version 2.0](http://www.apache.org/licenses/)
