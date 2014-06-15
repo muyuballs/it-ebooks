@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="info.breezes.itebooks.app" >
+
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:name="info.breezes.itebooks.app.ITEBooksApp"
+        android:allowBackup="true"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme" >
+        <activity
+            android:name="info.breezes.itebooks.app.MainActivity"
+            android:label="@string/app_name" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="info.breezes.itebooks.app.settings.SettingsActivity"
+            android:label="@string/title_activity_settings" >
+        </activity>
+        <activity
+            android:name="info.breezes.itebooks.app.activity.BookDetailActivity"
+            android:label="@string/title_activity_book_detail" >
+        </activity>
+        <activity
+            android:name="info.breezes.itebooks.app.activity.PDFViewActivity"
+            android:label="@string/title_activity_pdfview" >
+        </activity>
+        <activity
+            android:name="info.breezes.itebooks.app.library.LibraryActivity"
+            android:label="@string/title_activity_library" >
+        </activity>
+
+        <receiver
+            android:name="info.breezes.itebooks.app.download.DownloadReceiver"
+            android:enabled="true"
+            android:exported="true" >
+            <intent-filter>
+                <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
+            </intent-filter>
+        </receiver>
+    </application>
+
+</manifest>
