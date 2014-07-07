@@ -1,12 +1,13 @@
-package info.breezes.itebooks.app.main;
+package info.breezes.itebooks.app.search;
 
+import android.app.Activity;
 import android.app.Fragment;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.v4.widget.SwipeRefreshLayout;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,9 +17,11 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.ImageLoader;
 import com.android.volley.toolbox.JsonObjectRequest;
+import info.breezes.annotation.LayoutView;
+import info.breezes.annotation.LayoutViewHelper;
+import info.breezes.itebooks.app.IFragmentHost;
 import info.breezes.itebooks.app.ITEBooksApp;
 import info.breezes.itebooks.app.R;
-
 import info.breezes.itebooks.app.activity.BookDetailActivity;
 import info.breezes.itebooks.app.model.Book;
 import info.breezes.itebooks.utils.URLUtils;
@@ -27,7 +30,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 
-public class SearchResultFragment extends Fragment implements AdapterView.OnItemClickListener, SwipeRefreshLayout.OnRefreshListener {
+public class SearchResultFragment extends Fragment implements AdapterView.OnItemClickListener, AbsListView.OnScrollListener {
 
     class SearchResultAdapter extends BaseAdapter {
 
@@ -82,9 +85,16 @@ public class SearchResultFragment extends Fragment implements AdapterView.OnItem
             notifyDataSetChanged();
         }
 
-        public void appendData(ArrayList<Book> books) {
-            this.books.addAll(books);
+        public int appendData(ArrayList<Book> books) {
+            int i = 0;
+            for (Book book : books) {
+                if (!this.books.contains(book)) {
+                    i++;
+                    this.books.add(book);
+                }
+            }
             notifyDataSetChanged();
+            return i;
         }
 
         class Holder {
@@ -94,13 +104,22 @@ public class SearchResultFragment extends Fragment implements AdapterView.OnItem
         }
     }
 
+    @LayoutView(R.id.listView)
     private ListView listView;
+    private View footer;
+    @LayoutView(R.id.search_progress_layout)
+    private LinearLayout progressLayout;
+
     private SearchResultAdapter searchResultAdapter;
-    private SwipeRefreshLayout swipeRefreshLayout;
+    private Context mContext;
     private String queryText;
     private Handler handler;
-    private int totalCount;
-    private int currentPage = 1;
+    private int totalCount = -1;
+    private int currentPage = 0;
+    private boolean searching = false;
+    private int newBookCount;
+
+    private IFragmentHost fragmentHost;
 
     public SearchResultFragment() {
     }
@@ -108,13 +127,17 @@ public class SearchResultFragment extends Fragment implements AdapterView.OnItem
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_search_result, null);
-        swipeRefreshLayout = (SwipeRefreshLayout) view.findViewById(R.id.swipeRefreshLayout);
-        swipeRefreshLayout.setOnRefreshListener(this);
-        listView = (ListView) view.findViewById(R.id.listView);
-        searchResultAdapter = new SearchResultAdapter(getActivity(), getActivity().getLayoutInflater());
-        listView.setAdapter(searchResultAdapter);
+        mContext = getActivity();
+        LayoutViewHelper.InitLayout(view, this);
+        footer = LayoutInflater.from(mContext).inflate(R.layout.listview_footer, null);
+        listView.addFooterView(footer, null, false);
+        listView.setFooterDividersEnabled(false);
+        listView.setOnScrollListener(this);
         listView.setOnItemClickListener(this);
+        searchResultAdapter = new SearchResultAdapter(mContext, inflater);
+        listView.setAdapter(searchResultAdapter);
         searchBooks(queryText);
+        ITEBooksApp.current.uploadSearchInfo(queryText);
         return view;
     }
 
@@ -123,15 +146,40 @@ public class SearchResultFragment extends Fragment implements AdapterView.OnItem
         super.onCreate(savedInstanceState);
         handler = new Handler();
         queryText = getArguments().getString(SearchManager.QUERY);
+        if (fragmentHost != null) {
+            fragmentHost.setTitle(queryText);
+        }
+    }
+
+
+    @Override
+    public void onAttach(Activity activity) {
+        fragmentHost = (IFragmentHost) activity;
+        super.onAttach(activity);
+    }
+
+    @Override
+    public void onDetach() {
+        fragmentHost = null;
+        super.onDetach();
     }
 
     private void searchBooks(String queryText) {
-        ITEBooksApp.current.requestQueue.add(new JsonObjectRequest("http://it-ebooks-api.info/v1/search/" + URLUtils.encode(queryText, "UTF-8") + "/page/" + (currentPage + 1), null, new Response.Listener<JSONObject>() {
+        if (searching) {
+            return;
+        }
+        if (currentPage*10 >= totalCount && totalCount != -1) {
+            return;
+        }
+        searching = true;
+        currentPage++;
+        String url = "http://it-ebooks-api.info/v1/search/" + URLUtils.encode(queryText, "UTF-8") + "/page/" + ((currentPage-1)*10);
+        Log.d("SRU:", url);
+        ITEBooksApp.current.requestQueue.add(new JsonObjectRequest(url, null, new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {
                 Log.d("SRF", response.toString());
                 totalCount = response.optInt("Total");
-                currentPage = response.optInt("Page");
                 JSONArray bookArray = response.optJSONArray("Books");
                 final ArrayList<Book> books = new ArrayList<Book>();
                 if (totalCount > 0) {
@@ -145,14 +193,17 @@ public class SearchResultFragment extends Fragment implements AdapterView.OnItem
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
-                        if (currentPage == 1) {
-                            searchResultAdapter.setData(books);
+                        if (totalCount > 0) {
+                            newBookCount = searchResultAdapter.appendData(books);
                         } else {
-                            searchResultAdapter.appendData(books);
+                            Toast.makeText(mContext, "Oh,no book found.", Toast.LENGTH_SHORT).show();
                         }
-                        swipeRefreshLayout.setRefreshing(false);
+                        if (newBookCount < 1) {
+                            listView.removeFooterView(footer);
+                        }
                     }
                 });
+                searching = false;
             }
 
             private Book parseBook(JSONObject jsonObject) {
@@ -177,29 +228,46 @@ public class SearchResultFragment extends Fragment implements AdapterView.OnItem
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
+                searching = false;
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(getActivity(), "Search Books Error", Toast.LENGTH_SHORT).show();
-                        swipeRefreshLayout.setRefreshing(false);
+                        listView.removeFooterView(footer);
+                        Toast.makeText(mContext, "Search Books Error", Toast.LENGTH_SHORT).show();
                     }
                 });
             }
         }));
     }
 
-    @Override
-    public void onRefresh() {
-        searchBooks(queryText);
+    private boolean hasMore() {
+        return (currentPage * 10 < totalCount && totalCount != -1) && newBookCount > 0;
     }
-
 
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         Book book = searchResultAdapter.getItem(position);
-        Intent intent = new Intent(getActivity(), BookDetailActivity.class);
+        Intent intent = new Intent(mContext, BookDetailActivity.class);
         intent.putExtra(ITEBooksApp.BOOK, book);
         startActivity(intent);
+    }
+
+    private int scrollState;
+
+    @Override
+    public void onScrollStateChanged(AbsListView view, int scrollState) {
+        this.scrollState = scrollState;
+    }
+
+    @Override
+    public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+        if (scrollState != SCROLL_STATE_IDLE) {
+            if (firstVisibleItem + visibleItemCount == totalItemCount && !searching && hasMore()) {
+                if (!TextUtils.isEmpty(queryText) && !searching) {
+                    searchBooks(queryText);
+                }
+            }
+        }
     }
 
 

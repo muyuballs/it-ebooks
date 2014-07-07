@@ -5,6 +5,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import info.breezes.itebooks.app.model.Book;
+import info.breezes.itebooks.app.model.DownloadLibMap;
 
 
 /**
@@ -33,6 +34,11 @@ public class Downloader {
         request.setDestinationInExternalFilesDir(ITEBooksApp.current.getApplicationContext(), "books", "download");
         request.addRequestHeader("Referer", "http://it-ebooks.info/book/" + book.ID + "/");
         request.setTitle(book.Title);
-        return downloadManager.enqueue(request);
+        long id= downloadManager.enqueue(request);
+        DownloadLibMap dlm=new DownloadLibMap();
+        dlm.ISBN=book.ISBN;
+        dlm.downloadId=id;
+        ITEBooksApp.current.dbHelp.insert(dlm);
+        return id;
     }
 }

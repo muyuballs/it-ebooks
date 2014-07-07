@@ -11,7 +11,7 @@ import java.io.Serializable;
 
 @Table(name = "books")
 public class Book implements Serializable {
-    @Column
+    @Column(name = "_id")
     public long ID;
     @Column
     public String Title;
@@ -33,4 +33,21 @@ public class Book implements Serializable {
     public String ISBN;
     @Column
     public String Download;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+
+        Book book = (Book) o;
+
+        if (!ISBN.equals(book.ISBN)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return ISBN.hashCode();
+    }
 }

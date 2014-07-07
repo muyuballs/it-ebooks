@@ -3,6 +3,7 @@ package info.breezes.itebooks.app;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import info.breezes.itebooks.app.model.Book;
+import info.breezes.itebooks.app.model.DownloadLibMap;
 import info.breezes.itebooks.app.model.Library;
 import info.breezes.orm.OrmSQLiteHelper;
 import info.breezes.orm.utils.TableUtils;
@@ -20,6 +21,7 @@ public class DbHelp extends OrmSQLiteHelper {
     public void onCreate(SQLiteDatabase db) {
         TableUtils.createTable(db, Book.class);
         TableUtils.createTable(db, Library.class);
+        TableUtils.createTable(db, DownloadLibMap.class);
     }
 
     @Override

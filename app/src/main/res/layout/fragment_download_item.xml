@@ -9,7 +9,7 @@
             android:layout_width="40dp"
             android:src="@drawable/ic_launcher"
             android:layout_gravity="center_vertical"
-            android:layout_height="70dp"/>
+            android:layout_height="60dp"/>
     <LinearLayout
             android:layout_marginLeft="8dp"
             android:orientation="vertical"

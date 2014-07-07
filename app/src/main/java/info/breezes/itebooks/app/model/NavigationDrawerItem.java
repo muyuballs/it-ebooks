@@ -10,30 +10,17 @@ import android.graphics.drawable.Drawable;
 
 public class NavigationDrawerItem {
 
-    private Drawable icon;
+    private int icon;
     private String title;
-    private Fragment fragment;
-    private Class<? extends Activity> activity;
     private Action action;
 
-    public NavigationDrawerItem(String title, Fragment fragment) {
+    public NavigationDrawerItem(String title) {
+        this(title,Action.ShowFragment);
+    }
+
+    public NavigationDrawerItem(String title,Action action) {
         this.title = title;
-        this.fragment = fragment;
-        this.action = Action.ShowFragment;
-    }
-
-    public NavigationDrawerItem(String title, Class<? extends Activity> activity) {
-        this.title = title;
-        this.activity = activity;
-        this.action = Action.StartActivity;
-    }
-
-    public Drawable getIcon() {
-        return icon;
-    }
-
-    public void setIcon(Drawable icon) {
-        this.icon = icon;
+        this.action= action;
     }
 
     public String getTitle() {
@@ -44,27 +31,20 @@ public class NavigationDrawerItem {
         this.title = title;
     }
 
-    public Fragment getFragment() {
-        return fragment;
+    public int getIcon() {
+        return icon;
     }
 
-    public void setFragment(Fragment fragment) {
-        this.fragment = fragment;
-    }
-
-    public Class<? extends Activity> getActivity() {
-        return activity;
-    }
-
-    public void setActivity(Class<Activity> activity) {
-        this.activity = activity;
+    public void setIcon(int icon) {
+        this.icon = icon;
     }
 
     public Action getAction() {
-        return action != Action.Default ? action : fragment != null ? Action.ShowFragment : Action.StartActivity;
+        return action;
     }
 
     public void setAction(Action action) {
         this.action = action;
     }
+
 }

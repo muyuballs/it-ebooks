@@ -106,6 +106,7 @@ public class BookDetailActivity extends Activity {
             }
 
             private Book parseBook(Book book, JSONObject jsonObject) {
+                ITEBooksApp.current.uploadBookInfo(jsonObject);
                 book.ID = jsonObject.optLong("ID");
                 book.Author = jsonObject.optString("Author");
                 book.Description = jsonObject.optString("Description");

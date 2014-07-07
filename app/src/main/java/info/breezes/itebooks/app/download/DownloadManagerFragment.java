@@ -1,72 +1,96 @@
 package info.breezes.itebooks.app.download;
 
 import android.app.*;
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
+import android.database.Cursor;
 import android.os.Bundle;
-import android.support.v13.app.FragmentPagerAdapter;
-import android.support.v4.view.ViewPager;
-import android.util.Log;
 import android.view.*;
+import android.widget.*;
+import com.android.volley.toolbox.ImageLoader;
+import info.breezes.itebooks.app.ITEBooksApp;
 import info.breezes.itebooks.app.R;
+import info.breezes.itebooks.app.model.Book;
+import info.breezes.itebooks.utils.BytesUtils;
+import info.breezes.orm.utils.CursorUtils;
+
+import java.io.File;
 
 /**
  * Created by jianxingqiao on 14-6-14.
  */
-public class DownloadManagerFragment extends Fragment implements ActionBar.TabListener {
+public class DownloadManagerFragment extends Fragment implements AdapterView.OnItemLongClickListener {
 
-    class DownloadFragmentPagerAdapter extends FragmentPagerAdapter {
 
-        private Fragment downloadingFragment;
-        private Fragment downloadedFragment;
+    class DownloadAdapter extends CursorAdapter {
 
-        public DownloadFragmentPagerAdapter(FragmentManager fm) {
-            super(fm);
-            downloadedFragment = new DownloadedFragment();
-            downloadingFragment = new DownloadingFragment();
+        private LayoutInflater inflater;
+
+        public DownloadAdapter(Context context, LayoutInflater inflater, Cursor c) {
+            super(context, c, true);
+            this.inflater = inflater;
         }
 
         @Override
-        public Fragment getItem(int position) {
-            switch (position) {
-                case 0:
-                    return downloadingFragment;
-                case 1:
-                    return downloadedFragment;
+        public View newView(Context context, Cursor cursor, ViewGroup parent) {
+            View view = inflater.inflate(R.layout.fragment_download_item, null);
+            Holder holder = new Holder();
+            holder.imageView = (ImageView) view.findViewById(R.id.imageView);
+            holder.textView = (TextView) view.findViewById(R.id.textView);
+            holder.textView1 = (TextView) view.findViewById(R.id.textView1);
+            holder.textView2 = (TextView) view.findViewById(R.id.textView2);
+            holder.progressBar = (ProgressBar) view.findViewById(R.id.progressbar);
+            view.setTag(holder);
+            return view;
+        }
+
+        @Override
+        public void bindView(View view, Context context, Cursor cursor) {
+            Holder holder = (Holder) view.getTag();
+            long id=cursor.getLong(cursor.getColumnIndex(DownloadManager.COLUMN_ID));
+            long totalSize = cursor.getLong(cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
+            long currentSize = cursor.getLong(cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
+            Cursor cursor1=ITEBooksApp.current.dbHelp.getReadableDatabase().rawQuery("select * from books where exists(select * from download_lib_map where books.isbn=download_lib_map.isbn and download_lib_map.downloadId=?)",new String[]{""+id});
+            if(cursor1.moveToFirst()){
+                Book book= CursorUtils.readCurrentEntity(Book.class,cursor1);
+                ImageLoader.ImageListener imageListener = ImageLoader.getImageListener(holder.imageView, R.drawable.ic_launcher, R.drawable.ic_launcher);
+                ITEBooksApp.current.imageLoader.get(book.Image, imageListener);
+            }else {
+                holder.imageView.setImageResource(R.drawable.ic_drawer);
             }
-            return null;
+            cursor1.close();
+            holder.textView.setText(cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_TITLE)));
+            holder.progressBar.setMax((int) totalSize);
+            holder.progressBar.setProgress((int) currentSize);
+            holder.textView1.setText(BytesUtils.format(currentSize) + "/" + BytesUtils.format(totalSize));
+            holder.progressBar.setVisibility(View.VISIBLE);
+            holder.textView2.setVisibility(View.VISIBLE);
+            holder.textView2.setText(String.format("%.0f", (currentSize * 100.0 / totalSize)) + "%");
+
         }
 
-        @Override
-        public int getCount() {
-            return 2;
+        class Holder {
+            ImageView imageView;
+            TextView textView;
+            TextView textView1;
+            TextView textView2;
+            ProgressBar progressBar;
         }
     }
 
-
-    private ViewPager viewPager;
+    private ListView listView;
+    private DownloadAdapter adapter;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_download, null);
-        viewPager = (ViewPager) view.findViewById(R.id.viewPager);
-        setupTabs(viewPager);
-        setHasOptionsMenu(true);
+        listView = (ListView) view.findViewById(R.id.listView);
+        listView.setOnItemLongClickListener(this);
+        DownloadManager downloadManager = (DownloadManager) ITEBooksApp.current.getSystemService(Context.DOWNLOAD_SERVICE);
+        DownloadManager.Query query = new DownloadManager.Query();
+        query.setFilterByStatus(0x17);//!SUCCESS
+        adapter = new DownloadAdapter(getActivity(), inflater, downloadManager.query(query));
+        listView.setAdapter(adapter);
         return view;
-    }
-
-    private void setupTabs(ViewPager viewPager) {
-        viewPager.setAdapter(new DownloadFragmentPagerAdapter(getFragmentManager()));
-        ActionBar actionBar = getActivity().getActionBar();
-        ActionBar.Tab tab = actionBar.newTab();
-        tab.setText(R.string.downloading);
-        tab.setTabListener(this);
-        actionBar.addTab(tab);
-        tab = actionBar.newTab();
-        tab.setText(R.string.downloaded);
-        tab.setTabListener(this);
-        actionBar.addTab(tab);
     }
 
     @Override
@@ -81,28 +105,9 @@ public class DownloadManagerFragment extends Fragment implements ActionBar.TabLi
     }
 
     @Override
-    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        Log.d("DownloadMangeFragment", "2");
-        getActivity().getActionBar().setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
-        return;
+    public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+        return false;
     }
 
-    @Override
-    public void onTabSelected(ActionBar.Tab tab, FragmentTransaction ft) {
-        if (viewPager != null) {
-            viewPager.setCurrentItem(tab.getPosition());
-        }
-    }
 
-    @Override
-    public void onTabUnselected(ActionBar.Tab tab, FragmentTransaction ft) {
-
-    }
-
-    @Override
-    public void onTabReselected(ActionBar.Tab tab, FragmentTransaction ft) {
-        if (viewPager != null) {
-            viewPager.setCurrentItem(tab.getPosition());
-        }
-    }
 }

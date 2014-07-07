@@ -38,4 +38,5 @@ dependencies {
     compile 'com.joanzapata.pdfview:android-pdfview:1.0.+@aar'
     compile 'info.breezes:breezes-orm:0.1.1@aar'
     compile 'com.google.zxing:core:2.3.0@jar'
+    compile 'com.astuetz:pagerslidingtabstrip:1.0.1'
 }

@@ -3,6 +3,7 @@ package info.breezes.itebooks.app;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.Fragment;
+import android.content.Intent;
 import android.support.v4.app.ActionBarDrawerToggle;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -19,6 +20,7 @@ import android.view.ViewGroup;
 import android.widget.*;
 import info.breezes.itebooks.app.model.Action;
 import info.breezes.itebooks.app.model.NavigationDrawerItem;
+import info.breezes.itebooks.app.settings.SettingsActivity;
 
 /**
  * Fragment used for managing interactions for and presentation of a navigation drawer.
@@ -78,7 +80,7 @@ public class NavigationDrawerFragment extends Fragment {
         }
 
         // Select either the default item (0) or the last selected item.
-        //selectItem(mCurrentSelectedPosition);
+        selectItem(mCurrentSelectedPosition);
     }
 
     @Override
@@ -91,20 +93,27 @@ public class NavigationDrawerFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        mDrawerListView = (ListView) inflater.inflate(R.layout.fragment_navigation_drawer, container, false);
+        View view=inflater.inflate(R.layout.fragment_navigation_drawer,container,false);
+        mDrawerListView = (ListView) view.findViewById(R.id.listView);
         mDrawerListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                selectItem(position, ((MainNavigationDrawerAdapter) mDrawerListView.getAdapter()).getItem(position));
+                selectItem(position);
             }
         });
+        mDrawerListView.setAdapter(new ArrayAdapter<String>(
+                getActionBar().getThemedContext(),
+                android.R.layout.simple_list_item_activated_1,
+                android.R.id.text1,
+                new String[]{
+                        getString(R.string.title_section1),
+                        getString(R.string.title_section2),
+                        getString(R.string.title_section3),
+                }));
         mDrawerListView.setItemChecked(mCurrentSelectedPosition, true);
-        return mDrawerListView;
+        return view;
     }
 
-    public void setDrawerListAdapter(ListAdapter adapter){
-        mDrawerListView.setAdapter(adapter);
-    }
 
     public boolean isDrawerOpen() {
         return mDrawerLayout != null && mDrawerLayout.isDrawerOpen(mFragmentContainerView);
@@ -185,16 +194,10 @@ public class NavigationDrawerFragment extends Fragment {
         mDrawerLayout.setDrawerListener(mDrawerToggle);
     }
 
-    private void selectItem(int position, NavigationDrawerItem item) {
+    private void selectItem(int position) {
         mCurrentSelectedPosition = position;
-        if (item.getAction() == Action.ShowFragment) {
-            if (mDrawerListView != null) {
-                mDrawerListView.setItemChecked(position, true);
-            }
-            mCurrentSelectedPosition = position;
-        }
         if (mCallbacks != null) {
-            mCallbacks.onNavigationDrawerItemSelected(position, item);
+            mCallbacks.onNavigationDrawerItemSelected(position);
         }
         if (mDrawerLayout != null) {
             mDrawerLayout.closeDrawer(mFragmentContainerView);
@@ -271,6 +274,6 @@ public class NavigationDrawerFragment extends Fragment {
         /**
          * Called when an item in the navigation drawer is selected.
          */
-        void onNavigationDrawerItemSelected(int position, NavigationDrawerItem item);
+        void onNavigationDrawerItemSelected(int position);
     }
 }
